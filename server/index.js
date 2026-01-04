@@ -1,15 +1,21 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const Todo = require('./models/Todo');
-require('dotenv').config();
+require('dotenv').config();  // <--- Load environment variables
 
 const app = express();
 app.use(express.json());
-app.use(cors());
 
-// Connect to MongoDB (Replace with your actual connection string if not using localhost)
-mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/mern-todo')
+// Allow requests from your frontend (Local + Production)
+app.use(cors({
+    origin: "*",
+    credentials: true
+}));
+
+// Connect using the variable
+const PORT = process.env.PORT || 5000;
+
+mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log('MongoDB Connected'))
     .catch(err => console.error(err));
 
@@ -37,4 +43,4 @@ app.delete('/todos/:id', async (req, res) => {
     res.json({ result: 'Task deleted' });
 });
 
-app.listen(5000, () => console.log('Server running on port 5000'));
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
