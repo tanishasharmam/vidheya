@@ -2,13 +2,15 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();  // <--- Load environment variables
+// server/index.js
+const cors = require('cors');
 
-const app = express();
 app.use(express.json());
 
-// Allow requests from your frontend (Local + Production)
+// ALLOW ALL ORIGINS
 app.use(cors({
     origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true
 }));
 
