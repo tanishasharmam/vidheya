@@ -69,8 +69,12 @@ app.post('/login', async (req, res) => {
 
 // 1. Get ONLY the logged-in user's tasks
 app.get('/todos', auth, async (req, res) => {
-    const todos = await Todo.find({ user: req.user.id }).sort({ createdAt: -1 });
-    res.json(todos);
+    try {
+        const todos = await Todo.find({ user: req.user.id }).sort({ createdAt: -1 });
+        res.json(todos);
+    } catch (error) {
+        res.status(500).json({ error: "Error fetching tasks" });
+    }
 });
 
 // 2. Create task attached to the user

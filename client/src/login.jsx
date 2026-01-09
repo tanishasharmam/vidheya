@@ -27,6 +27,8 @@ const Login = ({ onLogin }) => {
             localStorage.setItem('token', res.data.token);
             localStorage.setItem('user', JSON.stringify(res.data.user));
 
+            axios.defaults.headers.common['x-auth-token'] = res.data.token;
+
             toast.success(isRegistering ? "Account created!" : "Welcome back!");
             onLogin(); // Navigate to Dashboard
 
