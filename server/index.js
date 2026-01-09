@@ -6,14 +6,13 @@ const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 const Todo = require('./models/Todo');
-const User = require('./models/User'); // <--- New Import
+const User = require('./models/User');
 
 const app = express();
 app.use(express.json());
 app.use(cors({ origin: "*", credentials: true }));
 
 const PORT = process.env.PORT || 5000;
-// You should put this in your .env file in production!
 const JWT_SECRET = "super_secret_key_12345";
 
 mongoose.connect(process.env.MONGO_URI)
@@ -26,24 +25,20 @@ mongoose.connect(process.env.MONGO_URI)
 app.post('/register', async (req, res) => {
     const { name, email, password } = req.body;
     try {
-        // Check if user exists
         const existingUser = await User.findOne({ email });
         if (existingUser) return res.status(400).json({ error: "User already exists" });
 
-        // Hash password
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Create User
         const newUser = new User({ name, email, password: hashedPassword });
         await newUser.save();
 
-        // Create Token
         const token = jwt.sign({ id: newUser._id }, JWT_SECRET);
         res.json({ token, user: { id: newUser._id, name: newUser.name, email: newUser.email } });
 
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: "Error creating user" });
     }
 });
 
@@ -51,24 +46,21 @@ app.post('/register', async (req, res) => {
 app.post('/login', async (req, res) => {
     const { email, password } = req.body;
     try {
-        // Find user
         const user = await User.findOne({ email });
         if (!user) return res.status(400).json({ error: "User not found" });
 
-        // Check password
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) return res.status(400).json({ error: "Invalid credentials" });
 
-        // Create Token
         const token = jwt.sign({ id: user._id }, JWT_SECRET);
         res.json({ token, user: { id: user._id, name: user.name, email: user.email } });
 
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: "Login failed" });
     }
 });
 
-// --- TODO ROUTES (Existing) ---
+// --- TODO ROUTES ---
 app.get('/todos', async (req, res) => {
     const todos = await Todo.find().sort({ createdAt: -1 });
     res.json(todos);
