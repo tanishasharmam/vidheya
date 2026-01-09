@@ -24,6 +24,14 @@ function TodoApp({ onLogout }) {
   const today = new Date();
   const dateString = today.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' });
 
+  // Configure global token for all requests
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      axios.defaults.headers.common['x-auth-token'] = token;
+    }
+  }, []);
+
   useEffect(() => {
     GetTodos();
   }, []);

@@ -19,9 +19,21 @@ mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log('MongoDB Connected'))
     .catch(err => console.error(err));
 
-// --- AUTH ROUTES ---
+// --- MIDDLEWARE (The Security Guard) ---
+const auth = (req, res, next) => {
+    const token = req.header('x-auth-token');
+    if (!token) return res.status(401).json({ error: "No token, authorization denied" });
 
-// 1. REGISTER
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        req.user = decoded; // Add user ID to the request
+        next();
+    } catch (e) {
+        res.status(400).json({ error: "Token is not valid" });
+    }
+};
+
+// --- AUTH ROUTES (Public) ---
 app.post('/register', async (req, res) => {
     const { name, email, password } = req.body;
     try {
@@ -36,13 +48,9 @@ app.post('/register', async (req, res) => {
 
         const token = jwt.sign({ id: newUser._id }, JWT_SECRET);
         res.json({ token, user: { id: newUser._id, name: newUser.name, email: newUser.email } });
-
-    } catch (err) {
-        res.status(500).json({ error: "Error creating user" });
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// 2. LOGIN
 app.post('/login', async (req, res) => {
     const { email, password } = req.body;
     try {
@@ -54,33 +62,40 @@ app.post('/login', async (req, res) => {
 
         const token = jwt.sign({ id: user._id }, JWT_SECRET);
         res.json({ token, user: { id: user._id, name: user.name, email: user.email } });
-
-    } catch (err) {
-        res.status(500).json({ error: "Login failed" });
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- TODO ROUTES ---
-app.get('/todos', async (req, res) => {
-    const todos = await Todo.find().sort({ createdAt: -1 });
+// --- TODO ROUTES (Protected) ---
+
+// 1. Get ONLY the logged-in user's tasks
+app.get('/todos', auth, async (req, res) => {
+    const todos = await Todo.find({ user: req.user.id }).sort({ createdAt: -1 });
     res.json(todos);
 });
 
-app.post('/todos', async (req, res) => {
-    const newTodo = new Todo({ text: req.body.text });
+// 2. Create task attached to the user
+app.post('/todos', auth, async (req, res) => {
+    const newTodo = new Todo({
+        text: req.body.text,
+        user: req.user.id // <--- Stamp with User ID
+    });
     await newTodo.save();
     res.json(newTodo);
 });
 
-app.put('/todos/:id', async (req, res) => {
-    const todo = await Todo.findById(req.params.id);
+app.put('/todos/:id', auth, async (req, res) => {
+    const todo = await Todo.findOne({ _id: req.params.id, user: req.user.id });
+    if (!todo) return res.status(404).json({ error: "Task not found" });
+
     todo.completed = !todo.completed;
     await todo.save();
     res.json(todo);
 });
 
-app.delete('/todos/:id', async (req, res) => {
-    await Todo.findByIdAndDelete(req.params.id);
+app.delete('/todos/:id', auth, async (req, res) => {
+    const result = await Todo.findOneAndDelete({ _id: req.params.id, user: req.user.id });
+    if (!result) return res.status(404).json({ error: "Task not found" });
+
     res.json({ result: 'Task deleted' });
 });
 
